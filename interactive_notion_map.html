@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>인애한의원 지점 안내 지도</title>
+  
+  <!-- Leaflet CSS for Interactive Map -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <style>
+    :root {
+      --teal-dk: #1f4f4b;
+      --teal-main: #2f6f6a;
+      --line: #e2e8f0;
+      --tint: #f8fafc;
+      --sub: #64748b;
+      --gold: #d97706;
+      --bg-active: #f1f5f9;
+    }
+
+    * {
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px;
+      background-color: #ffffff;
+      color: #1e293b;
+    }
+
+    /* 사용자 CSS 스타일 완벽 재현 */
+    .inp-mapwrap {
+      width: 100%;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    .inp-maphead {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .inp-maphead .inp-h2 {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 800;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .inp-maphead .inp-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--teal-dk);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    .inp-maphead .inp-btn:hover {
+      background: #f8fafc;
+      border-color: var(--teal-main);
+      color: var(--teal-main);
+    }
+
+    .inp-maphead .inp-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: currentColor;
+    }
+
+    .inp-map {
+      width: 100%;
+      height: 460px;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      background: var(--tint);
+      z-index: 0;
+      position: relative;
+    }
+
+    /* 커스텀 핀 (마커) */
+    .inp-pin {
+      display: block;
+      width: 28px;
+      height: 28px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      background: var(--teal-main);
+      border: 3px solid #ffffff;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: transform 0.2s, background-color 0.2s;
+    }
+
+    .inp-pin:hover {
+      transform: rotate(-45deg) scale(1.15);
+      background: #194a46;
+    }
+
+    .inp-pin.active {
+      background: #dc2626 !important;
+      z-index: 999;
+    }
+
+    /* 커스텀 팝업 스타일 */
+    .leaflet-popup-content-wrapper {
+      padding: 0;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+      border: none;
+      overflow: hidden;
+    }
+
+    .leaflet-popup-content {
+      margin: 0 !important;
+      line-height: 1.5;
+    }
+
+    .leaflet-container a.leaflet-popup-close-button {
+      top: 10px;
+      right: 10px;
+      color: #94a3b8;
+      font-size: 18px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+    }
+
+    .leaflet-container a.leaflet-popup-close-button:hover {
+      color: #334155;
+      background: #f1f5f9;
+    }
+
+    .inp-pop {
+      min-width: 220px;
+      max-width: 280px;
+      padding: 16px;
+      background: #fff;
+      font-size: 13.5px;
+      color: #1e293b;
+    }
+
+    .inp-pop b {
+      display: block;
+      font-size: 16px;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 4px;
+    }
+
+    .inp-pop .addr {
+      display: block;
+      color: #64748b;
+      font-size: 12.5px;
+      margin-bottom: 10px;
+      word-break: keep-all;
+    }
+
+    .inp-pop .actions {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .inp-pop a.btn-link {
+      flex: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 6px 10px;
+      font-size: 12.5px;
+      font-weight: 700;
+      border-radius: 6px;
+      text-decoration: none;
+      text-align: center;
+      transition: background 0.2s;
+    }
+
+    .inp-pop a.btn-naver {
+      background: #03cf5d;
+      color: #ffffff;
+    }
+
+    .inp-pop a.btn-naver:hover {
+      background: #02b350;
+    }
+
+    .inp-pop a.btn-tel {
+      background: #f1f5f9;
+      color: var(--teal-dk);
+      border: 1px solid #cbd5e1;
+    }
+
+    .inp-pop a.btn-tel:hover {
+      background: #e2e8f0;
+    }
+
+    /* 내 위치 마커 */
+    .inp-me {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #2563eb;
+      border: 3px solid #ffffff;
+      box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.3);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0px rgba(37, 99, 235, 0.5); }
+      70% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+      100% { box-shadow: 0 0 0 0px rgba(37, 99, 235, 0); }
+    }
+
+    /* 추천 지점 영역 */
+    .inp-near {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 12px;
+      background: var(--tint);
+      border: 1px solid var(--line);
+      display: none;
+    }
+
+    .inp-near.active {
+      display: block;
+      animation: fadeIn 0.3s ease-in-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .inp-near p {
+      margin: 0 0 10px;
+      font-weight: 700;
+      font-size: 15px;
+      color: #0f172a;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .inp-near ol {
+      margin: 0;
+      padding-left: 20px;
+      font-size: 14px;
+    }
+
+    .inp-near li {
+      margin: 6px 0;
+      color: #334155;
+    }
+
+    .inp-near a {
+      font-weight: 700;
+      color: var(--teal-dk);
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .inp-near a:hover {
+      text-decoration: underline;
+    }
+
+    .inp-near small {
+      color: var(--sub);
+      margin-left: 8px;
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+
+    .inp-mapnote {
+      margin: 10px 0 0;
+      font-size: 12px;
+      color: var(--sub);
+      text-align: right;
+    }
+  </style>
+</head>
+<body>
+
+<div class="inp-mapwrap">
+  <!-- 지도 헤더 -->
+  <div class="inp-maphead">
+    <h2 class="inp-h2">
+      📍 지도에서 보기
+    </h2>
+    <button type="button" class="inp-btn" id="btn-near" onclick="findNearestBranch()">
+      <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+      내 위치에서 가까운 지점
+    </button>
+  </div>
+
+  <!-- 지도 영역 -->
+  <div id="map" class="inp-map"></div>
+
+  <!-- 가까운 지점 결과 영역 -->
+  <div id="near-result" class="inp-near">
+    <p>🎯 현재 위치에서 가장 가까운 지점</p>
+    <ol id="near-list"></ol>
+  </div>
+
+  <p class="inp-mapnote">* 지도의 핀을 클릭하시면 상세 안내 및 네이버 지도 길찾기로 연결됩니다.</p>
+</div>
+
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+  // 인애한의원 전국 14개 대표 지점 데이터셋
+  const branches = [
+    { name: '인애한의원 강남점', lat: 37.4979, lng: 127.0276, phone: '02-593-1075', addr: '서울특별시 서초구 강남대로 381', search: '인애한의원 강남점' },
+    { name: '인애한의원 노원점', lat: 37.6542, lng: 127.0608, phone: '02-938-1075', addr: '서울특별시 노원구 상계로 64', search: '인애한의원 노원점' },
+    { name: '인애한의원 잠실신천점', lat: 37.5115, lng: 127.0851, phone: '02-424-1075', addr: '서울특별시 송파구 올림픽로 102', search: '인애한의원 잠실신천점' },
+    { name: '인애한의원 영등포점', lat: 37.5172, lng: 126.9072, phone: '02-2633-1075', addr: '서울특별시 영등포구 영등포로 200', search: '인애한의원 영등포점' },
+    { name: '인애한의원 목동점', lat: 37.5258, lng: 126.8752, phone: '02-2644-1075', addr: '서울특별시 양천구 목동동로 293', search: '인애한의원 목동점' },
+    { name: '인애한의원 인천점', lat: 37.4503, lng: 126.7028, phone: '032-428-1075', addr: '인천광역시 남동구 인하로 497-5', search: '인애한의원 인천점' },
+    { name: '인애한의원 수원점', lat: 37.2636, lng: 127.0286, phone: '031-238-1075', addr: '경기도 수원시 팔달구 권광로 181', search: '인애한의원 수원점' },
+    { name: '인애한의원 분당점', lat: 37.3850, lng: 127.1235, phone: '031-707-1075', addr: '경기도 성남시 분당구 황새울로 360번길', search: '인애한의원 분당점' },
+    { name: '인애한의원 일산점', lat: 37.6582, lng: 126.7691, phone: '031-903-1075', addr: '경기도 고양시 일산동구 정발산로 24', search: '인애한의원 일산점' },
+    { name: '인애한의원 부천점', lat: 37.5042, lng: 126.7628, phone: '032-327-1075', addr: '경기도 부천시 원미구 길주로 211', search: '인애한의원 부천점' },
+    { name: '인애한의원 대구점', lat: 35.8655, lng: 128.5934, phone: '053-254-1075', addr: '대구광역시 중구 달구벌대로 2077', search: '인애한의원 대구점' },
+    { name: '인애한의원 부산서면점', lat: 35.1578, lng: 129.0592, phone: '051-803-1075', addr: '부산광역시 진구 중앙대로 686', search: '인애한의원 부산서면점' },
+    { name: '인애한의원 울산점', lat: 35.5396, lng: 129.3115, phone: '052-267-1075', addr: '울산광역시 남구 삼산로 273', search: '인애한의원 울산점' },
+    { name: '인애한의원 창원점', lat: 35.2285, lng: 128.6812, phone: '055-287-1075', addr: '경상남도 창원시 성산구 중앙대로 104', search: '인애한의원 창원점' }
+  ];
+
+  // 1. Leaflet 지도 초기화 (한국 중심 좌표)
+  const map = L.map('map', {
+    zoomControl: false
+  }).setView([36.2, 127.8], 7);
+
+  // 우측 상단 확대/축소 버튼 추가
+  L.control.zoom({ position: 'topright' }).addTo(map);
+
+  // 지도 타일 설정 (OpenStreetMap - 깔끔하고 속도가 빠름)
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  const markers = [];
+
+  // 커스텀 핀 아이콘 생성 함수
+  function createPinIcon(isActive = false) {
+    return L.divIcon({
+      className: 'custom-pin-wrapper',
+      html: `<div class="inp-pin ${isActive ? 'active' : ''}"></div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 28],
+      popupAnchor: [0, -28]
+    });
+  }
+
+  // 2. 14개 지점 마커 추가
+  branches.forEach((b, idx) => {
+    const marker = L.marker([b.lat, b.lng], { icon: createPinIcon() }).addTo(map);
+    
+    // 네이버 지도 길찾기 직접 링크 생성
+    const naverMapUrl = `https://map.naver.com/v5/search/${encodeURIComponent(b.search)}`;
+
+    // 팝업 콘텐츠 세팅
+    const popupContent = `
+      <div class="inp-pop">
+        <b>${b.name}</b>
+        <span class="addr">${b.addr}</span>
+        <div class="actions">
+          <a href="tel:${b.phone}" class="btn-link btn-tel">📞 ${b.phone}</a>
+          <a href="${naverMapUrl}" target="_blank" class="btn-link btn-naver">네이버 지도</a>
+        </div>
+      </div>
+    `;
+
+    marker.bindPopup(popupContent);
+    marker.branchData = b;
+    marker.branchIdx = idx;
+    markers.push(marker);
+  });
+
+  // 3. '내 위치에서 가까운 지점' 계산 알고리즘 (Haversine Formula)
+  function getDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // 지구 반지름 (km)
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  }
+
+  let userMarker = null;
+
+  function findNearestBranch() {
+    const btn = document.getElementById('btn-near');
+    btn.innerText = '⌛ 위치 확인 중...';
+
+    if (!navigator.geolocation) {
+      alert('사용 중인 브라우저가 위치 서비스를 지원하지 않습니다.');
+      btn.innerText = '내 위치에서 가까운 지점';
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const uLat = pos.coords.latitude;
+        const uLng = pos.coords.longitude;
+
+        // 기존 내 위치 마커 제거 후 재설정
+        if (userMarker) map.removeLayer(userMarker);
+
+        const myIcon = L.divIcon({
+          className: 'custom-me-wrapper',
+          html: `<div class="inp-me"></div>`,
+          iconSize: [18, 18],
+          iconAnchor: [9, 9]
+        });
+
+        userMarker = L.marker([uLat, uLng], { icon: myIcon }).addTo(map);
+        userMarker.bindPopup('<div style="padding: 8px 12px; font-weight:700;">📍 현재 나의 위치</div>');
+
+        // 각 지점과의 거리 계산
+        const calculated = branches.map((b, idx) => {
+          const dist = getDistance(uLat, uLng, b.lat, b.lng);
+          return { ...b, dist, idx };
+        });
+
+        // 거리순 정렬
+        calculated.sort((a, b) => a.dist - b.dist);
+
+        // 상위 3개 지점 추출
+        const top3 = calculated.slice(0, 3);
+
+        // 결과 리스트 생성
+        const listEl = document.getElementById('near-list');
+        listEl.innerHTML = '';
+
+        top3.forEach((item) => {
+          const li = document.createElement('li');
+          const distStr = item.dist < 1 ? `${Math.round(item.dist * 1000)}m` : `${item.dist.toFixed(1)}km`;
+          li.innerHTML = `
+            <a onclick="focusBranch(${item.idx})">${item.name}</a>
+            <small>(${distStr})</small>
+          `;
+          listEl.appendChild(li);
+        });
+
+        document.getElementById('near-result').classList.add('active');
+
+        // 가장 가까운 지점이 보이도록 화면 이동
+        focusBranch(top3[0].idx);
+
+        btn.innerText = '내 위치에서 가까운 지점';
+      },
+      (err) => {
+        alert('위치 정보를 가져올 수 없습니다. 브라우저의 위치 권한을 확인해 주세요.');
+        btn.innerText = '내 위치에서 가까운 지점';
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }
+
+  // 지점 선택 시 지도 포커스 및 팝업 오픈
+  function focusBranch(idx) {
+    const targetMarker = markers[idx];
+    const b = branches[idx];
+
+    map.flyTo([b.lat, b.lng], 13, { duration: 1.2 });
+    setTimeout(() => {
+      targetMarker.openPopup();
+    }, 1200);
+  }
+</script>
+
+</body>
+</html>
